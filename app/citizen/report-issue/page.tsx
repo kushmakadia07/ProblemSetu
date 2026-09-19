@@ -1,0 +1,666 @@
+"use client";
+
+import React, { useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import {
+  MapPin,
+  FileText,
+  Camera,
+  Video,
+  Mic,
+  ShieldCheck,
+  CheckCircle,
+  ArrowRight,
+  ArrowLeft,
+  Navigation,
+  Upload,
+  AlertTriangle
+} from "lucide-react";
+import { store } from "@/lib/store";
+
+const JHARKHAND_DISTRICTS = [
+  "Ranchi", "Dhanbad", "Bokaro", "East Singhbhum (Jamshedpur)", "West Singhbhum (Chaibasa)",
+  "Palamu", "Garhwa", "Chatra", "Hazaribagh", "Ramgarh", "Koderma", "Giridih",
+  "Deoghar", "Dumka", "Godda", "Sahebganj", "Pakur", "Jamtara", "Lohardaga",
+  "Gumla", "Simdega", "Latehar", "Khunti", "Saraikela Kharsawan"
+];
+
+const CATEGORIES = [
+  "Water & Sanitation (Fluoride/Arsenic/Handpump)",
+  "Clean Energy & Microgrid (Solar/Vaccine Chiller)",
+  "Agri-Tech & Forest Produce (Mahua/Lac/Cold Storage)",
+  "Tribal Healthcare (Malnutrition/Millet/Tele-health)",
+  "Mining Safety & Dust Control (Coal Dust/Air Quality)",
+  "Rural Infrastructure & Wildlife Safety (Elephant Alert/Bridges)"
+];
+
+export default function ReportIssuePage() {
+  const router = useRouter();
+  const [currentStep, setCurrentStep] = useState<number>(1);
+
+  // Form states
+  const [district, setDistrict] = useState("Ranchi");
+  const [block, setBlock] = useState("");
+  const [panchayat, setPanchayat] = useState("");
+  const [village, setVillage] = useState("");
+  const [coordinates, setCoordinates] = useState<{ lat: number; lng: number }>({ lat: 23.3441, lng: 85.3096 });
+  const [gpsCaptured, setGpsCaptured] = useState(false);
+
+  // New Step 2 (Confirmation)
+  const [q1, setQ1] = useState("");
+  const [q2, setQ2] = useState("");
+  const [q3, setQ3] = useState("");
+  const [q4, setQ4] = useState("");
+
+  // Step 3
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [category, setCategory] = useState(CATEGORIES[0]);
+  const [urgency, setUrgency] = useState<"Normal" | "High" | "Critical">("High");
+  const [affectedCount, setAffectedCount] = useState(500);
+
+  // Step 3
+  const [mediaUploaded, setMediaUploaded] = useState<string[]>([
+    "https://images.unsplash.com/photo-1541888946425-d0fbb18086f6?w=600&auto=format&fit=crop&q=80"
+  ]);
+  const [voiceRecorded, setVoiceRecorded] = useState(false);
+
+  // Step 4
+  const [citizenName, setCitizenName] = useState(() => store.getCitizenAuth().name || "Birsa Munda Oraon");
+  const [citizenPhone, setCitizenPhone] = useState(() => store.getCitizenAuth().phone || "9835102918");
+  const [aadhaarNumber, setAadhaarNumber] = useState(() => store.getCitizenAuth().aadhaar || "543210984092");
+  const [aadhaarLast4, setAadhaarLast4] = useState("4092");
+  const [otp, setOtp] = useState("123456");
+  const [submittedId, setSubmittedId] = useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (currentStep === 3 && !gpsCaptured) {
+      if (typeof navigator !== "undefined" && navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            setCoordinates({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+            setGpsCaptured(true);
+          },
+          (err) => {
+            console.warn("Geolocation error:", err);
+            setCoordinates({ lat: 23.3441, lng: 85.3096 });
+            setGpsCaptured(true);
+          }
+        );
+      } else {
+        setCoordinates({ lat: 23.3441, lng: 85.3096 });
+        setGpsCaptured(true);
+      }
+    }
+  }, [currentStep, gpsCaptured]);
+
+  const handleSimulateFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      setMediaUploaded([
+        ...mediaUploaded,
+        "https://images.unsplash.com/photo-1574482620811-1aa16ffe3c82?w=600&auto=format&fit=crop&q=80"
+      ]);
+    }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleanCategory = category.split(" (")[0];
+    const newGrievance = store.addGrievance({
+      title,
+      description,
+      category: cleanCategory,
+      district,
+      block: block || "Central Block",
+      panchayat: panchayat || "Gram Panchayat",
+      coordinates,
+      citizenName,
+      citizenPhone,
+      urgency,
+      affectedCount: Number(affectedCount),
+      mediaUrls: mediaUploaded,
+    });
+
+    setSubmittedId(newGrievance.id);
+  };
+
+  return (
+    <div className="max-w-4xl mx-auto px-4 py-8">
+      {/* Header */}
+      <div className="bg-[#1b365d] text-white p-6 rounded-lg shadow-sm border-b-4 border-[#e87722] mb-8">
+        <div className="flex items-center gap-2 text-xs text-amber-300 font-semibold mb-1">
+          <ShieldCheck className="w-4 h-4" />
+          <span>OFFICIAL CPGRAMS MULTI-STEP REPORTING FORM</span>
+        </div>
+        <h1 className="text-xl sm:text-2xl font-bold">
+          Lodge Rural Community Problem for University Engineering
+        </h1>
+        <p className="text-xs text-gray-300 mt-1">
+          All reports are geocoded, assigned to state engineering universities (JSRIP-2025), and funded via CSR escrow.
+        </p>
+      </div>
+
+      {submittedId ? (
+        /* Submission Success Stage */
+        <div className="gov-card p-8 text-center border-2 border-emerald-500 space-y-4">
+          <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-700 mx-auto flex items-center justify-center">
+            <CheckCircle className="w-10 h-10" />
+          </div>
+
+          <h2 className="text-2xl font-bold text-[#1b365d]">
+            Grievance Successfully Registered!
+          </h2>
+
+          <div className="bg-blue-50 border border-blue-200 p-4 rounded max-w-md mx-auto">
+            <div className="text-xs text-gray-600 font-semibold">Your Registration Tracking ID:</div>
+            <div className="text-2xl font-mono font-extrabold text-[#1b365d] tracking-wider my-1">
+              {submittedId}
+            </div>
+            <div className="text-[11px] text-gray-500">
+              An SMS confirmation with tracking URL has been sent to +91 {citizenPhone}.
+            </div>
+          </div>
+
+          <p className="text-xs text-gray-600 max-w-lg mx-auto leading-relaxed">
+            Your grievance is now routed to the District Innovation Officer for verification and will be matched with student engineering capstone teams across Jharkhand universities.
+          </p>
+
+          <div className="flex justify-center gap-3 pt-4">
+            <Link href="/citizen/dashboard" className="gov-btn-primary text-xs px-5 py-2.5 rounded font-bold">
+              <span>View in Citizen Dashboard</span>
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+            <button
+              onClick={() => {
+                setSubmittedId(null);
+                setCurrentStep(1);
+                setTitle("");
+                setDescription("");
+              }}
+              className="gov-btn-outline text-xs px-4 py-2.5 rounded"
+            >
+              Report Another Problem
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="gov-card border border-gray-300 rounded shadow-md overflow-hidden">
+          {/* 4-Step Stepper Bar */}
+          <div className="bg-gray-100 border-b border-gray-300 grid grid-cols-5 text-xs font-semibold text-center">
+            <div className={`py-3 px-1 border-b-2 transition ${currentStep === 1 ? "border-[#e87722] bg-white text-[#1b365d] font-bold" : "border-transparent text-gray-500"}`}>
+              1. Problem Details
+            </div>
+            <div className={`py-3 px-1 border-b-2 transition ${currentStep === 2 ? "border-[#e87722] bg-white text-[#1b365d] font-bold" : "border-transparent text-gray-500"}`}>
+              2. Confirmation
+            </div>
+            <div className={`py-3 px-1 border-b-2 transition ${currentStep === 3 ? "border-[#e87722] bg-white text-[#1b365d] font-bold" : "border-transparent text-gray-500"}`}>
+              3. Location
+            </div>
+            <div className={`py-3 px-1 border-b-2 transition ${currentStep === 4 ? "border-[#e87722] bg-white text-[#1b365d] font-bold" : "border-transparent text-gray-500"}`}>
+              4. Evidence
+            </div>
+            <div className={`py-3 px-1 border-b-2 transition ${currentStep === 5 ? "border-[#e87722] bg-white text-[#1b365d] font-bold" : "border-transparent text-gray-500"}`}>
+              5. Review & OTP
+            </div>
+          </div>
+
+          <div className="p-6">
+            {/* Step 3: Location & GPS Tagging */}
+            {currentStep === 3 && (
+              <div className="space-y-4">
+                <div className="border-b border-gray-200 pb-2 mb-4">
+                  <h2 className="text-base font-bold text-[#1b365d]">Step 3: Grassroots Location & Geotag</h2>
+                  <p className="text-xs text-gray-600">
+                    Specify the exact administrative division. GPS coordinates are automatically tracked.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">
+                      District (Jharkhand) *
+                    </label>
+                    <select
+                      value={district}
+                      onChange={(e) => setDistrict(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded text-sm bg-white focus:outline-hidden focus:border-[#1b365d]"
+                    >
+                      {JHARKHAND_DISTRICTS.map((d) => (
+                        <option key={d} value={d}>
+                          {d}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">
+                      Block / Tehsil *
+                    </label>
+                    <input
+                      type="text"
+                      value={block}
+                      onChange={(e) => setBlock(e.target.value)}
+                      placeholder="e.g. Daltonganj / Jharia / Chaibasa"
+                      required
+                      className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-hidden focus:border-[#1b365d]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">
+                      Gram Panchayat *
+                    </label>
+                    <input
+                      type="text"
+                      value={panchayat}
+                      onChange={(e) => setPanchayat(e.target.value)}
+                      placeholder="e.g. Chhatauna / Bhulanbararee"
+                      required
+                      className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-hidden focus:border-[#1b365d]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">
+                      Village / Hamlet (Tola)
+                    </label>
+                    <input
+                      type="text"
+                      value={village}
+                      onChange={(e) => setVillage(e.target.value)}
+                      placeholder="e.g. Munda Tola"
+                      className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-hidden focus:border-[#1b365d]"
+                    />
+                  </div>
+                </div>
+
+                {/* GPS Tagging Box */}
+                <div className="bg-slate-50 border border-slate-300 p-4 rounded-md mt-4">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                    <div>
+                      <div className="text-xs font-bold text-[#1b365d] flex items-center gap-1.5">
+                        <Navigation className="w-4 h-4 text-[#e87722]" />
+                        <span>GPS Geolocation Automatically Tracked</span>
+                      </div>
+                      <div className="text-xs text-gray-600 mt-1">
+                        Current Coordinates:{" "}
+                        <strong className="font-mono text-gray-800">
+                          {coordinates.lat.toFixed(5)}° N, {coordinates.lng.toFixed(5)}° E
+                        </strong>{" "}
+                        {gpsCaptured && (
+                          <span className="text-emerald-700 font-semibold">(Tagged via location data)</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex justify-between pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setCurrentStep(2)}
+                    className="gov-btn-outline text-xs px-4 py-2 rounded"
+                  >
+                    <ArrowLeft className="w-3.5 h-3.5" />
+                    <span>Previous</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!block || !panchayat) {
+                        alert("Please fill in Block and Gram Panchayat.");
+                        return;
+                      }
+                      setCurrentStep(4);
+                    }}
+                    className="gov-btn-primary text-xs px-6 py-2.5 rounded font-bold"
+                  >
+                    <span>Next: Evidence Upload</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Step 1: Problem Description & Severity */}
+            {currentStep === 1 && (
+              <div className="space-y-4">
+                <div className="border-b border-gray-200 pb-2 mb-4">
+                  <h2 className="text-base font-bold text-[#1b365d]">Step 1: Societal Problem Description</h2>
+                  <p className="text-xs text-gray-600">
+                    Describe the ground reality to help engineering faculty understand design constraints.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                    Problem Domain / Category *
+                  </label>
+                  <select
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded text-sm bg-white focus:outline-hidden focus:border-[#1b365d]"
+                  >
+                    {CATEGORIES.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                    Problem Summary / Title *
+                  </label>
+                  <input
+                    type="text"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    placeholder="e.g. Arsenic and Fluoride contamination in community drinking water"
+                    required
+                    className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-hidden focus:border-[#1b365d]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                    Detailed Ground Description & Daily Hardship *
+                  </label>
+                  <textarea
+                    rows={4}
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="Describe how long the issue has persisted, how many households are impacted, seasonal factors, and what past attempts have failed..."
+                    required
+                    className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-hidden focus:border-[#1b365d]"
+                  />
+                </div>
+
+
+                <div className="flex justify-end pt-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!title || !description) {
+                        alert("Please fill in the title and description.");
+                        return;
+                      }
+                      setCurrentStep(2);
+                    }}
+                    className="gov-btn-primary text-xs px-6 py-2 rounded font-bold"
+                  >
+                    <span>Next: Confirmation</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Step 2: Confirmation Questions */}
+            {currentStep === 2 && (
+              <div className="space-y-4">
+                <div className="border-b border-gray-200 pb-2 mb-4">
+                  <h2 className="text-base font-bold text-[#1b365d]">Step 2: Confirmation Questions</h2>
+                  <p className="text-xs text-gray-600">
+                    Additional details for Water Problems to help verify the exact issue.
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                    Is this problem happening with just one tap, or with all the taps throughout the house or building?
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={q1}
+                    onChange={(e) => setQ1(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-hidden focus:border-[#1b365d]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                    Have you recently cleaned your underground storage tank, overhead tank, or RO filter?
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={q2}
+                    onChange={(e) => setQ2(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-hidden focus:border-[#1b365d]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                    Does the water leave white spots or hard scales on your utensils, taps, or bathroom tiles when it dries?
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={q3}
+                    onChange={(e) => setQ3(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-hidden focus:border-[#1b365d]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                    How does the water taste—does it feel salty/heavy, or does it taste sour or metallic?
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={q4}
+                    onChange={(e) => setQ4(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-hidden focus:border-[#1b365d]"
+                  />
+                </div>
+
+                <div className="flex justify-between pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setCurrentStep(1)}
+                    className="gov-btn-outline text-xs px-4 py-2 rounded"
+                  >
+                    <ArrowLeft className="w-3.5 h-3.5" />
+                    <span>Previous</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCurrentStep(3)}
+                    className="gov-btn-primary text-xs px-6 py-2 rounded font-bold"
+                  >
+                    <span>Next: Location</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Step 4: Photographic, Video & Audio Evidence */}
+            {currentStep === 4 && (
+              <div className="space-y-4">
+                <div className="border-b border-gray-200 pb-2 mb-4">
+                  <h2 className="text-base font-bold text-[#1b365d]">Step 4: Photographic Evidence Upload</h2>
+                  <p className="text-xs text-gray-600">
+                    Upload photos so engineers can inspect site constraints.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 max-w-sm gap-4">
+                  {/* Photo Upload Simulator */}
+                  <div className="border-2 border-dashed border-gray-300 rounded p-4 text-center bg-gray-50 hover:bg-gray-100 transition">
+                    <Camera className="w-8 h-8 text-[#1b365d] mx-auto mb-2" />
+                    <div className="text-xs font-bold text-gray-800">Attach Photographs</div>
+                    <div className="text-[10px] text-gray-500 mb-2">JPG, PNG (Max 10MB)</div>
+                    <label className="gov-btn-outline text-xs py-1 px-3 cursor-pointer">
+                      <span>Browse Photo</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleSimulateFileUpload}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+
+                </div>
+
+                {/* Uploaded Evidence Preview List */}
+                <div className="bg-slate-50 border border-slate-200 p-3 rounded">
+                  <div className="text-xs font-bold text-gray-700 mb-2">
+                    Attached Evidence Items ({mediaUploaded.length}):
+                  </div>
+                  <div className="flex flex-wrap gap-2 text-xs">
+                    {mediaUploaded.map((url, i) => (
+                      <span key={i} className="bg-white border border-gray-300 px-2.5 py-1 rounded flex items-center gap-1">
+                        <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>Site_Photo_0{i + 1}.jpg (Geotagged)</span>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex justify-between pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setCurrentStep(3)}
+                    className="gov-btn-outline text-xs px-4 py-2 rounded"
+                  >
+                    <ArrowLeft className="w-3.5 h-3.5" />
+                    <span>Previous</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCurrentStep(5)}
+                    className="gov-btn-primary text-xs px-6 py-2 rounded font-bold"
+                  >
+                    <span>Next: Citizen Verification & Submit</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Step 5: Citizen Verification & SMS OTP Confirmation */}
+            {currentStep === 5 && (
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="border-b border-gray-200 pb-2 mb-4">
+                  <h2 className="text-base font-bold text-[#1b365d]">
+                    Step 5: Citizen Identity Verification & Final Submission
+                  </h2>
+                  <p className="text-xs text-gray-600">
+                    To prevent frivolous grievances, the reporter&apos;s identity is authenticated via Aadhaar-linked Mobile OTP.
+                  </p>
+                </div>
+
+                {/* Summary Box */}
+                <div className="bg-blue-50 border border-blue-200 p-3 rounded text-xs space-y-1">
+                  <div className="font-bold text-[#1b365d] text-sm">{title}</div>
+                  <div className="text-gray-700">
+                    Location: <strong>{panchayat} Panchayat, {block}, {district}</strong> (GPS: {coordinates.lat.toFixed(4)}, {coordinates.lng.toFixed(4)})
+                  </div>
+                  <div className="text-gray-600">Category: {category.split(" (")[0]} • Urgency: {urgency}</div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">
+                      Full Name of Citizen / Mukhiya *
+                    </label>
+                    <input
+                      type="text"
+                      value={citizenName}
+                      onChange={(e) => setCitizenName(e.target.value)}
+                      required
+                      className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-hidden focus:border-[#1b365d]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">
+                      Mobile Number (For SMS Status Alerts) *
+                    </label>
+                    <input
+                      type="tel"
+                      value={citizenPhone}
+                      onChange={(e) => setCitizenPhone(e.target.value)}
+                      required
+                      className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-hidden focus:border-[#1b365d]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">
+                      Aadhaar Card Number (12 Digits - Proof of Person) *
+                    </label>
+                    <input
+                      type="text"
+                      maxLength={12}
+                      value={aadhaarNumber}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/\D/g, "").slice(0, 12);
+                        setAadhaarNumber(val);
+                        setAadhaarLast4(val.slice(-4));
+                      }}
+                      placeholder="1234 5678 9012"
+                      required
+                      className="w-full px-3 py-2 border border-gray-300 rounded text-sm font-mono tracking-wider focus:outline-hidden focus:border-[#1b365d]"
+                    />
+                  </div>
+                </div>
+
+                <div className="p-2.5 bg-emerald-50 border border-emerald-300 rounded text-xs text-emerald-800 font-semibold flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>Aadhaar Linked Mobile Verified (UIDAI Proof of Person Authenticated)</span>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                    Enter SMS OTP (Auto-sent to linked +91 {citizenPhone}) *
+                  </label>
+                  <div className="flex gap-2 items-center">
+                    <input
+                      type="text"
+                      maxLength={6}
+                      value={otp}
+                      onChange={(e) => setOtp(e.target.value)}
+                      placeholder="Use demo OTP: 123456"
+                      required
+                      className="w-48 px-3 py-2 border border-gray-300 rounded text-sm font-mono font-bold tracking-widest text-center focus:outline-hidden focus:border-[#1b365d]"
+                    />
+                    <span className="text-xs text-emerald-700 font-semibold">
+                      OTP Verified via Aadhaar Mobile Gateway
+                    </span>
+                  </div>
+                </div>
+
+                <div className="p-3 bg-amber-50 border border-amber-300 rounded text-xs text-amber-900 flex items-start gap-2">
+                  <AlertTriangle className="w-4 h-4 text-[#e87722] shrink-0 mt-0.5" />
+                  <span>
+                    By submitting, you certify that this is a genuine community issue. It will be posted on the public transparency board and routed to university engineering departments under JSRIP-2025.
+                  </span>
+                </div>
+
+                <div className="flex justify-between pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setCurrentStep(4)}
+                    className="gov-btn-outline text-xs px-4 py-2 rounded"
+                  >
+                    <ArrowLeft className="w-3.5 h-3.5" />
+                    <span>Previous</span>
+                  </button>
+                  <button
+                    type="submit"
+                    className="gov-btn-accent text-sm px-8 py-2.5 rounded font-bold shadow-md"
+                  >
+                    <ShieldCheck className="w-4 h-4" />
+                    <span>Submit & Generate CPGRAMS Ticket</span>
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
