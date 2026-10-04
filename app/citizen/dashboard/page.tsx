@@ -172,10 +172,6 @@ export default function CitizenDashboard() {
 
                   <div className="text-xs text-gray-500 flex items-center gap-2">
                     <span>Reported: {item.submittedAt}</span>
-                    <span>•</span>
-                    <span className="text-[#1b365d] font-semibold">
-                      Affected: ~{item.affectedCount.toLocaleString()} Citizens
-                    </span>
                   </div>
                 </div>
 

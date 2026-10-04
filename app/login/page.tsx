@@ -7,19 +7,12 @@ import { ShieldCheck, CheckCircle } from "lucide-react";
 import { store } from "@/lib/store";
 import { useLanguage } from "@/lib/language";
 
-const INDIA_STATES_DISTRICTS: Record<string, string[]> = {
-  "Jharkhand": [
-    "Ranchi", "Dhanbad", "Bokaro", "East Singhbhum", "West Singhbhum",
-    "Palamu", "Garhwa", "Chatra", "Hazaribagh", "Ramgarh", "Koderma", "Giridih",
-    "Deoghar", "Dumka", "Godda", "Sahebganj", "Pakur", "Jamtara", "Lohardaga",
-    "Gumla", "Simdega", "Latehar", "Khunti", "Saraikela Kharsawan"
-  ],
-  "Bihar": ["Patna", "Gaya", "Bhagalpur", "Muzaffarpur", "Purnia", "Darbhanga", "Ara"],
-  "West Bengal": ["Kolkata", "Howrah", "Darjeeling", "Malda", "Murshidabad", "Purulia"],
-  "Odisha": ["Bhubaneswar", "Cuttack", "Rourkela", "Puri", "Sambalpur", "Balasore"],
-  "Chhattisgarh": ["Raipur", "Bhilai", "Bilaspur", "Korba", "Raigarh"],
-  "Other": ["Other"]
-};
+const JHARKHAND_DISTRICTS: string[] = [
+  "Ranchi", "Dhanbad", "Bokaro", "East Singhbhum", "West Singhbhum",
+  "Palamu", "Garhwa", "Chatra", "Hazaribagh", "Ramgarh", "Koderma", "Giridih",
+  "Deoghar", "Dumka", "Godda", "Sahebganj", "Pakur", "Jamtara", "Lohardaga",
+  "Gumla", "Simdega", "Latehar", "Khunti", "Saraikela Kharsawan"
+];
 
 function LoginContent() {
   const router = useRouter();
@@ -182,15 +175,11 @@ function LoginContent() {
                     </label>
                     <select
                       value={addressState}
-                      onChange={(e) => {
-                        setAddressState(e.target.value);
-                        setAddressDistrict(INDIA_STATES_DISTRICTS[e.target.value][0]);
-                      }}
-                      className="w-full px-3 py-2 border border-gray-300 rounded text-sm bg-white focus:outline-hidden focus:border-[#1b365d]"
+                      onChange={(e) => setAddressState(e.target.value)}
+                      disabled
+                      className="w-full px-3 py-2 border border-gray-300 rounded text-sm bg-gray-100 text-gray-800 font-medium focus:outline-hidden cursor-not-allowed"
                     >
-                      {Object.keys(INDIA_STATES_DISTRICTS).map((state) => (
-                        <option key={state} value={state}>{state}</option>
-                      ))}
+                      <option value="Jharkhand">Jharkhand</option>
                     </select>
                   </div>
                   <div>
@@ -202,7 +191,7 @@ function LoginContent() {
                       onChange={(e) => setAddressDistrict(e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded text-sm bg-white focus:outline-hidden focus:border-[#1b365d]"
                     >
-                      {INDIA_STATES_DISTRICTS[addressState].map((dist) => (
+                      {JHARKHAND_DISTRICTS.map((dist) => (
                         <option key={dist} value={dist}>{dist}</option>
                       ))}
                     </select>

@@ -1,4 +1,8 @@
-// State management and mock data persistence for Jharkhand Societal Innovation Portal
+import {
+  fetchGrievancesFromSupabase,
+  saveGrievanceToSupabase,
+  updateGrievanceStatusInSupabase
+} from "./supabase";
 
 export type UserRole = "public" | "citizen" | "university" | "csr" | "admin";
 
@@ -38,6 +42,7 @@ export interface Grievance {
   citizenRating?: number;
   citizenFeedback?: string;
   mediaUrls: string[];
+  aiDiagnosticQa?: Array<{ question: string; answer: string }>;
 }
 
 export interface BOMItem {
@@ -534,11 +539,11 @@ class StateStore {
   constructor() {
     if (typeof window !== "undefined") {
       try {
+        // Ensure no grievances are stored in localStorage as per architectural rules
+        localStorage.removeItem("jh_portal_grievances");
+
         const storedRole = localStorage.getItem("jh_portal_role") as UserRole;
         if (storedRole) this.currentRole = storedRole;
-
-        const storedGrv = localStorage.getItem("jh_portal_grievances");
-        if (storedGrv) this.grievances = JSON.parse(storedGrv);
 
         const storedProps = localStorage.getItem("jh_portal_proposals");
         if (storedProps) this.proposals = JSON.parse(storedProps);
@@ -563,6 +568,23 @@ class StateStore {
       } catch (err) {
         console.warn("Storage hydration failed", err);
       }
+
+      // Initial async sync from Supabase database
+      this.syncFromSupabase();
+    }
+  }
+
+  public async syncFromSupabase() {
+    try {
+      const dbGrievances = await fetchGrievancesFromSupabase();
+      if (dbGrievances && dbGrievances.length > 0) {
+        const dbIds = new Set(dbGrievances.map((g) => g.id));
+        const nonDuplicateSeed = this.grievances.filter((g) => !dbIds.has(g.id));
+        this.grievances = [...dbGrievances, ...nonDuplicateSeed];
+        this.notify();
+      }
+    } catch (err) {
+      console.warn("Failed to sync grievances from Supabase:", err);
     }
   }
 
@@ -577,7 +599,6 @@ class StateStore {
     if (typeof window !== "undefined") {
       try {
         localStorage.setItem("jh_portal_role", this.currentRole);
-        localStorage.setItem("jh_portal_grievances", JSON.stringify(this.grievances));
         localStorage.setItem("jh_portal_proposals", JSON.stringify(this.proposals));
         localStorage.setItem("jh_portal_funded", JSON.stringify(this.fundedProjects));
         localStorage.setItem("jh_portal_aadhaar", this.citizenAadhaar);
@@ -638,6 +659,12 @@ class StateStore {
     };
     this.grievances = [newEntry, ...this.grievances];
     this.notify();
+
+    // Persist to Supabase PostgreSQL database
+    saveGrievanceToSupabase(newEntry).catch((err) => {
+      console.warn("Supabase background save warning:", err);
+    });
+
     return newEntry;
   }
 
@@ -649,6 +676,11 @@ class StateStore {
       return g;
     });
     this.notify();
+
+    // Persist status change to Supabase
+    updateGrievanceStatusInSupabase(id, status, extra).catch((err) => {
+      console.warn("Supabase background status update warning:", err);
+    });
   }
 
   public getProposals(): Proposal[] {
@@ -721,6 +753,15 @@ class StateStore {
       return g;
     });
     this.notify();
+
+    // Persist resolution to Supabase
+    updateGrievanceStatusInSupabase(grievanceId, "RESOLVED_CLOSED", {
+      citizenRating: rating,
+      citizenFeedback: feedback,
+      resolutionProofPhotoUrl: photoProofUrl,
+    }).catch((err) => {
+      console.warn("Supabase verifyResolution warning:", err);
+    });
   }
 }
 

@@ -121,7 +121,17 @@ CREATE POLICY "Public profiles are viewable by everyone" ON profiles FOR SELECT 
 CREATE POLICY "Users can update own profile" ON profiles FOR UPDATE USING (auth.uid() = id);
 
 CREATE POLICY "Grievances are viewable by everyone" ON grievances FOR SELECT USING (true);
-CREATE POLICY "Citizens can insert grievances" ON grievances FOR INSERT WITH CHECK (auth.uid() = citizen_id);
+CREATE POLICY "Anyone can insert grievances" ON grievances FOR INSERT WITH CHECK (true);
+CREATE POLICY "Anyone can update grievances" ON grievances FOR UPDATE USING (true);
 
 CREATE POLICY "Proposals viewable by universities and CSR" ON proposals FOR SELECT USING (true);
+CREATE POLICY "Proposals insertable by university" ON proposals FOR INSERT WITH CHECK (true);
 CREATE POLICY "Escrow projects viewable by all authenticated" ON csr_funded_projects FOR SELECT USING (true);
+
+-- Supabase Storage Setup for media & attachments
+INSERT INTO storage.buckets (id, name, public) 
+VALUES ('grievance-media', 'grievance-media', true)
+ON CONFLICT (id) DO NOTHING;
+
+CREATE POLICY "Public Access to grievance media" ON storage.objects FOR SELECT USING (bucket_id = 'grievance-media');
+CREATE POLICY "Public Upload to grievance media" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'grievance-media');

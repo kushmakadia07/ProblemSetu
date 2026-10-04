@@ -16,7 +16,8 @@ import {
   ArrowRight,
   ArrowLeft,
   Building,
-  DollarSign
+  DollarSign,
+  Sparkles
 } from "lucide-react";
 import { store, Grievance, BOMItem, Proposal } from "@/lib/store";
 
@@ -223,12 +224,29 @@ function UniversityProposalsContent() {
               </select>
 
               {selectedGrievance && (
-                <div className="bg-slate-50 border border-slate-200 p-3 rounded text-xs space-y-1 mt-2">
+                <div className="bg-slate-50 border border-slate-200 p-3 rounded text-xs space-y-2 mt-2">
                   <div className="font-semibold text-gray-900">{selectedGrievance.title}</div>
                   <div className="text-gray-600">{selectedGrievance.description}</div>
                   <div className="text-gray-500 text-[11px]">
                     Location: {selectedGrievance.panchayat}, {selectedGrievance.district} • Urgency: {selectedGrievance.urgency}
                   </div>
+
+                  {selectedGrievance.aiDiagnosticQa && selectedGrievance.aiDiagnosticQa.length > 0 && (
+                    <div className="mt-2.5 pt-2 border-t border-slate-200 space-y-1.5">
+                      <div className="flex items-center gap-1.5 text-[11px] font-bold text-indigo-900">
+                        <Sparkles className="w-3 h-3 text-indigo-600" />
+                        <span>AI Technical Diagnostic Parameters (Google Gemini Intake)</span>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-1">
+                        {selectedGrievance.aiDiagnosticQa.map((qa, i) => (
+                          <div key={i} className="bg-white p-2 rounded border border-indigo-100 text-[11px]">
+                            <div className="font-semibold text-gray-700">{qa.question}</div>
+                            <div className="text-indigo-950 mt-0.5">{qa.answer || "No response recorded"}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
