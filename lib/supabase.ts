@@ -10,49 +10,76 @@ export const isSupabaseConfigured = Boolean(
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-export interface DbGrievanceRow {
-  id: string;
-  citizen_id?: string | null;
-  title: string;
-  description: string;
-  category: string;
-  district: string;
-  block: string;
-  panchayat: string;
-  latitude: number | null;
-  longitude: number | null;
-  urgency: string;
-  affected_count: number;
-  status: GrievanceStatus;
-  media_urls: string[];
-  ai_diagnostic_qa: Array<{ question: string; answer: string }>;
-  assigned_university_id?: string | null;
-  resolution_summary?: string | null;
-  resolution_proof_url?: string | null;
-  citizen_rating?: number | null;
-  citizen_feedback?: string | null;
-  submitted_at: string;
-  resolved_at?: string | null;
+export interface CitizenProfileData {
+  fullName: string;
+  phone: string;
+  aadhaarNumber?: string;
+  state?: string;
+  district?: string;
+  addressLine?: string;
+}
+
+/**
+ * Upserts a citizen profile in the Supabase 'profiles' table on successful login/OTP verification.
+ * Automatically inserts a new row or updates existing row matching on phone.
+ */
+export async function upsertCitizenProfileInSupabase(
+  profile: CitizenProfileData
+): Promise<{ id: string; fullName: string; phone: string } | null> {
+  try {
+    const cleanPhone = profile.phone.replace(/\D/g, "");
+    const cleanAadhaar = (profile.aadhaarNumber || "").replace(/\D/g, "");
+
+    const { data, error } = await supabase
+      .from("profiles")
+      .upsert(
+        {
+          full_name: profile.fullName.trim(),
+          phone: cleanPhone,
+          aadhaar_number: cleanAadhaar || "000000000000",
+          state: profile.state || "Jharkhand",
+          district: profile.district || "Ranchi",
+          address_line: profile.addressLine || "",
+          role: "citizen",
+          is_verified: true,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "phone" }
+      )
+      .select("id, full_name, phone")
+      .single();
+
+    if (error) {
+      console.warn("Supabase upsert profile warning:", error.message);
+      return null;
+    }
+
+    console.log(`[SUPABASE] Citizen profile saved/updated:`, data);
+    return data ? { id: data.id, fullName: data.full_name, phone: data.phone } : null;
+  } catch (err) {
+    console.error("Supabase upsert profile exception:", err);
+    return null;
+  }
 }
 
 export function mapDbRowToGrievance(row: any): Grievance {
   return {
-    id: row.id,
+    id: row.tracking_code || row.id,
     title: row.title,
     description: row.description,
-    category: row.category,
+    category: row.category || "General Infrastructure",
     district: row.district,
-    block: row.block,
-    panchayat: row.panchayat,
+    block: row.block || "",
+    panchayat: row.panchayat || "",
     coordinates: {
       lat: row.latitude || 23.3441,
       lng: row.longitude || 85.3096,
     },
-    citizenName: row.citizen_name || "Citizen Reporter",
-    citizenPhone: row.citizen_phone || "",
-    status: row.status as GrievanceStatus,
-    urgency: (row.urgency as "Normal" | "High" | "Critical") || "High",
-    affectedCount: row.affected_count || 100,
+    citizenName: row.profiles?.full_name || row.citizen_name || "Citizen Reporter",
+    citizenPhone: row.profiles?.phone || row.citizen_phone || "",
+    status: (row.status?.toUpperCase() as GrievanceStatus) || "LODGED",
+    urgency: ((row.urgency?.charAt(0).toUpperCase() + row.urgency?.slice(1)) as "Normal" | "High" | "Critical") || "High",
+    affectedCount: row.affected_population || row.affected_count || 100,
     submittedAt: row.submitted_at ? new Date(row.submitted_at).toISOString().split("T")[0] : new Date().toISOString().split("T")[0],
     assignedUniversityId: row.assigned_university_id || undefined,
     resolutionSummary: row.resolution_summary || undefined,
@@ -68,7 +95,7 @@ export async function fetchGrievancesFromSupabase(): Promise<Grievance[] | null>
   try {
     const { data, error } = await supabase
       .from("grievances")
-      .select("*")
+      .select("*, profiles(full_name, phone)")
       .order("submitted_at", { ascending: false });
 
     if (error) {
@@ -86,21 +113,40 @@ export async function fetchGrievancesFromSupabase(): Promise<Grievance[] | null>
   }
 }
 
-export async function saveGrievanceToSupabase(g: Grievance): Promise<boolean> {
+export async function saveGrievanceToSupabase(g: Grievance, citizenProfileId?: string): Promise<boolean> {
   try {
+    // If citizenProfileId is not provided, look up or find a valid profile ID
+    let profileId = citizenProfileId;
+    if (!profileId && g.citizenPhone) {
+      const cleanPhone = g.citizenPhone.replace(/\D/g, "");
+      const { data: prof } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("phone", cleanPhone)
+        .maybeSingle();
+      if (prof) profileId = prof.id;
+    }
+
+    // Fallback to first available citizen profile or create default if needed
+    if (!profileId) {
+      const { data: firstProf } = await supabase.from("profiles").select("id").limit(1).maybeSingle();
+      profileId = firstProf?.id || "a1000000-0000-0000-0000-000000000001";
+    }
+
     const row = {
-      id: g.id,
+      tracking_code: g.id,
+      citizen_id: profileId,
       title: g.title,
       description: g.description,
-      category: g.category,
       district: g.district,
-      block: g.block,
-      panchayat: g.panchayat,
+      block: g.block || null,
+      panchayat: g.panchayat || null,
+      ward_or_colony: g.panchayat || g.district,
       latitude: g.coordinates?.lat || 23.3441,
       longitude: g.coordinates?.lng || 85.3096,
-      urgency: g.urgency,
-      affected_count: g.affectedCount,
-      status: g.status,
+      urgency: (g.urgency?.toLowerCase() as any) || "medium",
+      status: (g.status?.toLowerCase() as any) || "submitted",
+      affected_population: g.affectedCount || 10,
       media_urls: g.mediaUrls || [],
       ai_diagnostic_qa: g.aiDiagnosticQa || [],
       submitted_at: g.submittedAt ? new Date(g.submittedAt).toISOString() : new Date().toISOString(),
@@ -119,18 +165,22 @@ export async function saveGrievanceToSupabase(g: Grievance): Promise<boolean> {
 }
 
 export async function updateGrievanceStatusInSupabase(
-  id: string,
+  trackingCodeOrId: string,
   status: GrievanceStatus,
   extra?: Partial<Grievance>
 ): Promise<boolean> {
   try {
-    const updates: Record<string, any> = { status };
+    const updates: Record<string, any> = { status: status.toLowerCase() };
     if (extra?.resolutionSummary) updates.resolution_summary = extra.resolutionSummary;
     if (extra?.resolutionProofPhotoUrl) updates.resolution_proof_url = extra.resolutionProofPhotoUrl;
     if (extra?.citizenRating) updates.citizen_rating = extra.citizenRating;
     if (extra?.citizenFeedback) updates.citizen_feedback = extra.citizenFeedback;
 
-    const { error } = await supabase.from("grievances").update(updates).eq("id", id);
+    const { error } = await supabase
+      .from("grievances")
+      .update(updates)
+      .or(`id.eq.${trackingCodeOrId},tracking_code.eq.${trackingCodeOrId}`);
+
     if (error) {
       console.warn("Supabase update error:", error.message);
       return false;

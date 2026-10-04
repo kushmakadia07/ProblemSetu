@@ -93,6 +93,19 @@ export default function VerifyResolutionPage() {
             </Link>
           </div>
         </div>
+      ) : grievances.length === 0 ? (
+        <div className="gov-card p-8 text-center border border-dashed border-gray-300 rounded space-y-3">
+          <CheckCircle2 className="w-10 h-10 text-gray-400 mx-auto" />
+          <h3 className="text-base font-bold text-[#1b365d]">No Grievances Awaiting Citizen Verification</h3>
+          <p className="text-xs text-gray-600 max-w-md mx-auto leading-relaxed">
+            There are currently no active grievances waiting for ground photographic sign-off. When an assigned engineering university completes a field prototype for your community problem, you will receive an SMS alert to sign-off here.
+          </p>
+          <div className="pt-2">
+            <Link href="/citizen/report-issue" className="gov-btn-accent text-xs font-semibold py-2 px-4 rounded inline-flex items-center gap-1.5">
+              <span>Report Community Issue</span>
+            </Link>
+          </div>
+        </div>
       ) : (
         <div className="space-y-6">
           {/* Select Grievance */}

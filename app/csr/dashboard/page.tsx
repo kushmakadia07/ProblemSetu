@@ -101,8 +101,10 @@ export default function CsrDashboard() {
 
         <div className="gov-card p-4 border-l-4 border-l-[#e87722]">
           <div className="text-xs font-semibold text-gray-600">Total Capital Requirement</div>
-          <div className="text-2xl font-bold text-[#e87722] mt-1">₹7.35 Lakhs</div>
-          <div className="text-[10px] text-gray-500 mt-0.5">Average ₹2.45L per village unit</div>
+          <div className="text-2xl font-bold text-[#e87722] mt-1">
+            ₹{(proposals.reduce((sum, p) => sum + p.totalBudget, 0) / 100000).toFixed(2)} Lakhs
+          </div>
+          <div className="text-[10px] text-gray-500 mt-0.5">Itemized university prototypes</div>
         </div>
 
         <div className="gov-card p-4 border-l-4 border-l-emerald-600">
@@ -138,7 +140,16 @@ export default function CsrDashboard() {
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {proposals.length === 0 ? (
+          <div className="gov-card p-8 text-center border border-dashed border-gray-300 rounded space-y-3">
+            <Building2 className="w-10 h-10 text-gray-400 mx-auto" />
+            <h3 className="text-base font-bold text-[#1b365d]">No University Proposals Awaiting Funding</h3>
+            <p className="text-xs text-gray-600 max-w-md mx-auto leading-relaxed">
+              When engineering universities submit solution proposals for citizen grievances, they will be listed here for corporate CSR escrow sponsorship.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {proposals.map((prop) => (
             <div key={prop.id} className="gov-card p-5 border border-gray-300 rounded flex flex-col justify-between hover:shadow-md transition">
               <div>
@@ -212,6 +223,7 @@ export default function CsrDashboard() {
             </div>
           ))}
         </div>
+        )}
       </div>
     </div>
   );

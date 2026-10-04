@@ -21,11 +21,16 @@ import {
   ShieldAlert,
   AlertCircle,
   XCircle,
-  Home
+  Home,
+  Film,
+  Trash2,
+  Sparkles
 } from "lucide-react";
 import { store } from "@/lib/store";
 import { uploadAttachmentToSupabase } from "@/lib/supabase";
 import VoiceInputButton from "@/components/VoiceInputButton";
+import VideoProblemRecorder from "@/components/VideoProblemRecorder";
+import type { VideoAnalysisResult } from "@/app/api/analyze-video/route";
 
 const JHARKHAND_DISTRICTS = [
   "Ranchi", "Dhanbad", "Bokaro", "East Singhbhum (Jamshedpur)", "West Singhbhum (Chaibasa)",
@@ -80,19 +85,39 @@ export default function ReportIssuePage() {
   const [urgency, setUrgency] = useState<"Normal" | "High" | "Critical">("High");
   const [affectedCount, setAffectedCount] = useState(500);
 
-  // Evidence states
-  const [mediaUploaded, setMediaUploaded] = useState<string[]>([
-    "https://images.unsplash.com/photo-1541888946425-d0fbb18086f6?w=600&auto=format&fit=crop&q=80"
-  ]);
+  // Evidence states (populated only when user uploads photos/videos)
+  const [mediaUploaded, setMediaUploaded] = useState<string[]>([]);
   const [isUploadingMedia, setIsUploadingMedia] = useState(false);
+  const [inputMode, setInputMode] = useState<"text" | "video">("text");
+  const [showEvidenceVideoRecorder, setShowEvidenceVideoRecorder] = useState<boolean>(false);
 
-  // Step 5 states
-  const [citizenName, setCitizenName] = useState(() => store.getCitizenAuth().name || "Birsa Munda Oraon");
-  const [citizenPhone, setCitizenPhone] = useState(() => store.getCitizenAuth().phone || "9835102918");
-  const [aadhaarNumber, setAadhaarNumber] = useState(() => store.getCitizenAuth().aadhaar || "543210984092");
-  const [aadhaarLast4, setAadhaarLast4] = useState("4092");
-  const [otp, setOtp] = useState("123456");
+  // Step 5 states (populated from actual logged in citizen session)
+  const [citizenName, setCitizenName] = useState(() => store.getCitizenAuth().name || "");
+  const [citizenPhone, setCitizenPhone] = useState(() => store.getCitizenAuth().phone || "");
+  const [aadhaarNumber, setAadhaarNumber] = useState(() => store.getCitizenAuth().aadhaar || "");
+  const [aadhaarLast4, setAadhaarLast4] = useState(() => (store.getCitizenAuth().aadhaar || "").slice(-4));
+  const [otp, setOtp] = useState("");
   const [submittedId, setSubmittedId] = useState<string | null>(null);
+
+  React.useEffect(() => {
+    const auth = store.getCitizenAuth();
+    if (auth.name) setCitizenName(auth.name);
+    if (auth.phone) setCitizenPhone(auth.phone);
+    if (auth.aadhaar) {
+      setAadhaarNumber(auth.aadhaar);
+      setAadhaarLast4(auth.aadhaar.slice(-4));
+    }
+    const unsub = store.subscribe(() => {
+      const updated = store.getCitizenAuth();
+      if (updated.name) setCitizenName(updated.name);
+      if (updated.phone) setCitizenPhone(updated.phone);
+      if (updated.aadhaar) {
+        setAadhaarNumber(updated.aadhaar);
+        setAadhaarLast4(updated.aadhaar.slice(-4));
+      }
+    });
+    return () => unsub();
+  }, []);
 
   React.useEffect(() => {
     if (currentStep === 3 && !gpsCaptured) {
@@ -181,6 +206,36 @@ export default function ReportIssuePage() {
     } finally {
       setIsGeneratingAiQuestions(false);
     }
+  };
+
+  const handleVideoAnalysisSuccess = (result: VideoAnalysisResult) => {
+    if (result.title) setTitle(result.title);
+    if (result.description) setDescription(result.description);
+    if (result.category) {
+      const cleanCatResult = result.category.toLowerCase();
+      const matched = CATEGORIES.find(
+        (c) =>
+          c.toLowerCase().includes(cleanCatResult) ||
+          cleanCatResult.includes(c.toLowerCase().split(" ")[0])
+      );
+      if (matched) setCategory(matched);
+    }
+    if (result.videoUrl) {
+      setMediaUploaded((prev) => (prev.includes(result.videoUrl!) ? prev : [...prev, result.videoUrl!]));
+    }
+    if (result.questions && Array.isArray(result.questions) && result.questions.length > 0) {
+      setDiagnosticQuestions(result.questions);
+    }
+    setValidationRejection(null);
+    setCurrentStep(2);
+  };
+
+  const handleVideoAnalysisRejection = (result: VideoAnalysisResult) => {
+    setValidationRejection({
+      classification: result.classification === "PRIVATE_PROPERTY" ? "PRIVATE_PROPERTY" : "SPAM_OR_FAKE",
+      citizenMessage: result.citizenMessage,
+      detailedReason: result.rejectionReason,
+    });
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -490,144 +545,222 @@ export default function ReportIssuePage() {
             {/* Step 1: Problem Description & Severity */}
             {currentStep === 1 && (
               <div className="space-y-4">
-                <div className="border-b border-gray-200 pb-2 mb-4">
+                <div className="border-b border-gray-200 pb-2 mb-3">
                   <h2 className="text-base font-bold text-[#1b365d]">Step 1: Societal Problem Description</h2>
                   <p className="text-xs text-gray-600">
-                    Describe the ground reality to help engineering faculty understand design constraints.
+                    Describe the ground reality to help engineering faculty understand design constraints. You can record a video statement or type/speak your complaint.
                   </p>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">
-                    Problem Domain / Category *
-                  </label>
-                  <select
-                    value={category}
-                    onChange={(e) => setCategory(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded text-sm bg-white focus:outline-hidden focus:border-[#1b365d]"
-                  >
-                    {CATEGORIES.map((c) => (
-                      <option key={c} value={c}>
-                        {c}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-1.5">
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-700">
-                        Detailed Ground Description & Daily Hardship *
-                      </label>
-                      <span className="text-[11px] text-gray-500">
-                        Speak in English (Indian accent supported) or type directly.
-                      </span>
-                    </div>
-                    <VoiceInputButton
-                      value={description}
-                      onChange={(val) => {
-                        setDescription(val);
-                        if (validationRejection) setValidationRejection(null);
-                      }}
-                      fieldName="Ground Description"
-                    />
-                  </div>
-                  <textarea
-                    rows={4}
-                    value={description}
-                    onChange={(e) => {
-                      setDescription(e.target.value);
-                      if (validationRejection) setValidationRejection(null);
-                    }}
-                    placeholder="Describe how long the issue has persisted, how many households are impacted, seasonal factors, and what past attempts have failed... (Speak in English or type)"
-                    required
-                    className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-hidden focus:border-[#1b365d]"
-                  />
-                </div>
-
-
-                {/* AI Validation Rejection Alert Card in Step 1 */}
-                {validationRejection && (
-                  <div
-                    className={`p-4 rounded-lg border-2 space-y-3 ${
-                      validationRejection.classification === "PRIVATE_PROPERTY"
-                        ? "bg-rose-50 border-rose-300 text-rose-950"
-                        : "bg-amber-50 border-amber-300 text-amber-950"
+                {/* Input Mode Selector */}
+                <div className="flex rounded-md border border-gray-300 p-1 bg-gray-50 mb-3 max-w-md">
+                  <button
+                    type="button"
+                    onClick={() => setInputMode("text")}
+                    className={`flex-1 py-1.5 px-3 rounded text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer ${
+                      inputMode === "text"
+                        ? "bg-[#1b365d] text-white shadow-xs"
+                        : "text-gray-700 hover:text-gray-900"
                     }`}
                   >
-                    <div className="flex items-start gap-3">
-                      <div
-                        className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${
-                          validationRejection.classification === "PRIVATE_PROPERTY"
-                            ? "bg-rose-100 text-rose-700"
-                            : "bg-amber-100 text-amber-700"
-                        }`}
-                      >
-                        {validationRejection.classification === "PRIVATE_PROPERTY" ? (
-                          <Home className="w-5 h-5" />
-                        ) : (
-                          <AlertTriangle className="w-5 h-5" />
-                        )}
-                      </div>
-                      <div className="space-y-1 flex-1">
-                        <div className="flex items-center gap-2">
-                          <h3 className="text-sm font-bold">
-                            {validationRejection.classification === "PRIVATE_PROPERTY"
-                              ? "Private Household / Personal Property Issue Detected"
-                              : "Incomplete or Invalid Submission"}
-                          </h3>
-                          <span
-                            className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded ${
-                              validationRejection.classification === "PRIVATE_PROPERTY"
-                                ? "bg-rose-200 text-rose-800"
-                                : "bg-amber-200 text-amber-800"
-                            }`}
+                    <FileText className="w-3.5 h-3.5" />
+                    <span>✍️ Written / Voice Input</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setInputMode("video")}
+                    className={`flex-1 py-1.5 px-3 rounded text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer ${
+                      inputMode === "video"
+                        ? "bg-[#1b365d] text-white shadow-xs"
+                        : "text-gray-700 hover:text-gray-900"
+                    }`}
+                  >
+                    <Film className="w-3.5 h-3.5 text-[#e87722]" />
+                    <span>📹 AI Video Statement (English)</span>
+                  </button>
+                </div>
+
+                {/* Video Statement Mode */}
+                {inputMode === "video" ? (
+                  <div className="space-y-4">
+                    <VideoProblemRecorder
+                      onAnalysisSuccess={handleVideoAnalysisSuccess}
+                      onAnalysisRejection={handleVideoAnalysisRejection}
+                    />
+
+                    {description && (
+                      <div className="bg-emerald-50 border border-emerald-300 p-4 rounded-lg text-xs space-y-2.5">
+                        <div className="flex items-center justify-between">
+                          <div className="font-bold text-emerald-900 text-sm flex items-center gap-1.5">
+                            <CheckCircle className="w-4 h-4 text-emerald-600" />
+                            <span>AI Processed Video Statement Ready</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setInputMode("text")}
+                            className="text-xs text-[#1b365d] underline font-semibold cursor-pointer"
                           >
-                            AI Policy Filter
-                          </span>
+                            Edit in Written Mode
+                          </button>
                         </div>
-                        <p className="text-xs leading-relaxed text-gray-800">
-                          {validationRejection.citizenMessage}
-                        </p>
-                        <div className="text-[11px] text-gray-600 bg-white/80 p-2.5 rounded border border-gray-200 mt-2">
-                          ℹ️ <strong>ProblemSetu Scope Policy:</strong> ProblemSetu is dedicated exclusively to public and community infrastructure (such as public roads, streetlights, community handpumps, and public drainage) to coordinate engineering resources for civic welfare. We cannot process private household or personal property issues.
+                        <div>
+                          <strong className="text-gray-800">Problem Title:</strong>{" "}
+                          <span className="text-[#1b365d] font-semibold">{title}</span>
+                        </div>
+                        <div className="text-gray-700 leading-relaxed">
+                          <strong>Ground Description:</strong> {description}
+                        </div>
+                        <div className="text-gray-600 text-[11px]">
+                          Category: <strong>{category}</strong> • <strong>{diagnosticQuestions.length} Questions Prepared</strong>
+                        </div>
+                        <div className="flex justify-end pt-2 border-t border-emerald-200">
+                          <button
+                            type="button"
+                            onClick={() => setCurrentStep(2)}
+                            className="gov-btn-primary text-xs px-5 py-2 rounded font-bold flex items-center gap-1.5"
+                          >
+                            <span>Proceed to Confirmation Questions</span>
+                            <ArrowRight className="w-3.5 h-3.5" />
+                          </button>
                         </div>
                       </div>
+                    )}
+                  </div>
+                ) : (
+                  /* Written / Voice Input Mode */
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 mb-1">
+                        Problem Domain / Category *
+                      </label>
+                      <select
+                        value={category}
+                        onChange={(e) => setCategory(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded text-sm bg-white focus:outline-hidden focus:border-[#1b365d]"
+                      >
+                        {CATEGORIES.map((c) => (
+                          <option key={c} value={c}>
+                            {c}
+                          </option>
+                        ))}
+                      </select>
                     </div>
 
-                    <div className="flex justify-end gap-2 pt-2 border-t border-gray-200">
+                    <div>
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-1.5">
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-700">
+                            Detailed Ground Description & Daily Hardship *
+                          </label>
+                          <span className="text-[11px] text-gray-500">
+                            Speak in English (Indian accent supported) or type directly.
+                          </span>
+                        </div>
+                        <VoiceInputButton
+                          value={description}
+                          onChange={(val) => {
+                            setDescription(val);
+                            if (validationRejection) setValidationRejection(null);
+                          }}
+                          fieldName="Ground Description"
+                        />
+                      </div>
+                      <textarea
+                        rows={4}
+                        value={description}
+                        onChange={(e) => {
+                          setDescription(e.target.value);
+                          if (validationRejection) setValidationRejection(null);
+                        }}
+                        placeholder="Describe how long the issue has persisted, how many households are impacted, seasonal factors, and what past attempts have failed... (Speak in English or type)"
+                        required
+                        className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-hidden focus:border-[#1b365d]"
+                      />
+                    </div>
+
+                    {/* AI Validation Rejection Alert Card in Step 1 */}
+                    {validationRejection && (
+                      <div
+                        className={`p-4 rounded-lg border-2 space-y-3 ${
+                          validationRejection.classification === "PRIVATE_PROPERTY"
+                            ? "bg-rose-50 border-rose-300 text-rose-950"
+                            : "bg-amber-50 border-amber-300 text-amber-950"
+                        }`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <div
+                            className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${
+                              validationRejection.classification === "PRIVATE_PROPERTY"
+                                ? "bg-rose-100 text-rose-700"
+                                : "bg-amber-100 text-amber-700"
+                            }`}
+                          >
+                            {validationRejection.classification === "PRIVATE_PROPERTY" ? (
+                              <Home className="w-5 h-5" />
+                            ) : (
+                              <AlertTriangle className="w-5 h-5" />
+                            )}
+                          </div>
+                          <div className="space-y-1 flex-1">
+                            <div className="flex items-center gap-2">
+                              <h3 className="text-sm font-bold">
+                                {validationRejection.classification === "PRIVATE_PROPERTY"
+                                  ? "Private Household / Personal Property Issue Detected"
+                                  : "Incomplete or Invalid Submission"}
+                              </h3>
+                              <span
+                                className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded ${
+                                  validationRejection.classification === "PRIVATE_PROPERTY"
+                                    ? "bg-rose-200 text-rose-800"
+                                    : "bg-amber-200 text-amber-800"
+                                }`}
+                              >
+                                AI Policy Filter
+                              </span>
+                            </div>
+                            <p className="text-xs leading-relaxed text-gray-800">
+                              {validationRejection.citizenMessage}
+                            </p>
+                            <div className="text-[11px] text-gray-600 bg-white/80 p-2.5 rounded border border-gray-200 mt-2">
+                              ℹ️ <strong>ProblemSetu Scope Policy:</strong> ProblemSetu is dedicated exclusively to public and community infrastructure (such as public roads, streetlights, community handpumps, and public drainage) to coordinate engineering resources for civic welfare. We cannot process private household or personal property issues.
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex justify-end gap-2 pt-2 border-t border-gray-200">
+                          <button
+                            type="button"
+                            onClick={() => setValidationRejection(null)}
+                            className="gov-btn-outline text-xs px-3 py-1.5 rounded"
+                          >
+                            Dismiss
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="flex justify-end pt-4">
                       <button
                         type="button"
-                        onClick={() => setValidationRejection(null)}
-                        className="gov-btn-outline text-xs px-3 py-1.5 rounded"
+                        disabled={isGeneratingAiQuestions}
+                        onClick={fetchGeminiQuestions}
+                        className="gov-btn-primary text-xs px-6 py-2.5 rounded font-bold flex items-center gap-2"
                       >
-                        Dismiss
+                        {isGeneratingAiQuestions ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin text-white" />
+                            <span>AI Validating Scope & Preparing...</span>
+                          </>
+                        ) : (
+                          <>
+                            <span>Next: Clarification Questions</span>
+                            <ArrowRight className="w-3.5 h-3.5" />
+                          </>
+                        )}
                       </button>
                     </div>
                   </div>
                 )}
-
-                <div className="flex justify-end pt-4">
-                  <button
-                    type="button"
-                    disabled={isGeneratingAiQuestions}
-                    onClick={fetchGeminiQuestions}
-                    className="gov-btn-primary text-xs px-6 py-2.5 rounded font-bold flex items-center gap-2"
-                  >
-                    {isGeneratingAiQuestions ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin text-white" />
-                        <span>AI Validating Scope & Preparing...</span>
-                      </>
-                    ) : (
-                      <>
-                        <span>Next: Clarification Questions</span>
-                        <ArrowRight className="w-3.5 h-3.5" />
-                      </>
-                    )}
-                  </button>
-                </div>
               </div>
             )}
 
@@ -721,18 +854,18 @@ export default function ReportIssuePage() {
               </div>
             )}
 
-            {/* Step 4: Photographic, Video & Audio Evidence */}
+            {/* Step 4: Photographic & Video Evidence */}
             {currentStep === 4 && (
               <div className="space-y-4">
                 <div className="border-b border-gray-200 pb-2 mb-4">
-                  <h2 className="text-base font-bold text-[#1b365d]">Step 4: Photographic Evidence & Supabase Storage</h2>
+                  <h2 className="text-base font-bold text-[#1b365d]">Step 4: Photographic & Video Evidence</h2>
                   <p className="text-xs text-gray-600">
-                    Upload photos directly to Supabase Storage so engineers can inspect site constraints.
+                    Upload photos or record a video statement. Spoken English statements are processed by Google Gemini to help engineers inspect site constraints.
                   </p>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 max-w-sm gap-4">
-                  {/* Photo Upload to Supabase */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 max-w-md gap-4">
+                  {/* Photo Upload */}
                   <div className="border-2 border-dashed border-gray-300 rounded p-4 text-center bg-gray-50 hover:bg-gray-100 transition">
                     {isUploadingMedia ? (
                       <Loader2 className="w-8 h-8 animate-spin text-[#1b365d] mx-auto mb-2" />
@@ -740,7 +873,7 @@ export default function ReportIssuePage() {
                       <Camera className="w-8 h-8 text-[#1b365d] mx-auto mb-2" />
                     )}
                     <div className="text-xs font-bold text-gray-800">
-                      {isUploadingMedia ? "Uploading to Supabase..." : "Attach Photographs"}
+                      {isUploadingMedia ? "Uploading to Storage..." : "Attach Photographs"}
                     </div>
                     <div className="text-[10px] text-gray-500 mb-2">JPG, PNG (Max 10MB)</div>
                     <label className="gov-btn-outline text-xs py-1 px-3 cursor-pointer">
@@ -755,21 +888,96 @@ export default function ReportIssuePage() {
                     </label>
                   </div>
 
+                  {/* Video Statement Studio Card */}
+                  <div className="border-2 border-dashed border-indigo-200 rounded p-4 text-center bg-indigo-50/50 hover:bg-indigo-50 transition flex flex-col justify-between">
+                    <div>
+                      <Film className="w-8 h-8 text-[#e87722] mx-auto mb-2" />
+                      <div className="text-xs font-bold text-[#1b365d]">AI Video Statement</div>
+                      <div className="text-[10px] text-gray-500 mb-2">Record or Upload (English)</div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowEvidenceVideoRecorder((prev) => !prev)}
+                      className="gov-btn-accent text-xs py-1 px-3 cursor-pointer font-bold self-center"
+                    >
+                      {showEvidenceVideoRecorder ? "Hide Video Studio" : "Open Video Studio"}
+                    </button>
+                  </div>
                 </div>
 
+                {/* Evidence Video Recorder Studio (when opened) */}
+                {showEvidenceVideoRecorder && (
+                  <div className="mt-3">
+                    <VideoProblemRecorder
+                      onAnalysisSuccess={(res) => {
+                        handleVideoAnalysisSuccess(res);
+                        setShowEvidenceVideoRecorder(false);
+                      }}
+                      onAnalysisRejection={handleVideoAnalysisRejection}
+                    />
+                  </div>
+                )}
+
                 {/* Uploaded Evidence Preview List */}
-                <div className="bg-slate-50 border border-slate-200 p-3 rounded">
-                  <div className="text-xs font-bold text-gray-700 mb-2">
+                <div className="bg-slate-50 border border-slate-200 p-4 rounded-lg">
+                  <div className="text-xs font-bold text-gray-700 mb-2.5">
                     Attached Evidence Items ({mediaUploaded.length}):
                   </div>
-                  <div className="flex flex-wrap gap-2 text-xs">
-                    {mediaUploaded.map((url, i) => (
-                      <span key={i} className="bg-white border border-gray-300 px-2.5 py-1 rounded flex items-center gap-1">
-                        <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
-                        <span>Site_Photo_0{i + 1}.jpg (Geotagged)</span>
-                      </span>
-                    ))}
-                  </div>
+                  {mediaUploaded.length === 0 ? (
+                    <div className="text-xs text-gray-500 italic p-3 bg-white rounded border border-dashed border-gray-300 text-center">
+                      No photos or videos attached yet. You can attach site photos or record a video statement above.
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {mediaUploaded.map((url, i) => {
+                        const isVideo =
+                          url.includes(".webm") ||
+                          url.includes(".mp4") ||
+                          url.includes(".mov") ||
+                          url.includes(".mkv") ||
+                          url.includes("/uploads/video_") ||
+                          url.startsWith("blob:");
+                        return (
+                          <div
+                            key={i}
+                            className="bg-white border border-gray-300 rounded-md p-2.5 shadow-xs space-y-2"
+                          >
+                            <div className="flex items-center justify-between text-xs font-semibold">
+                              <span className="flex items-center gap-1.5 text-gray-800">
+                                {isVideo ? (
+                                  <Film className="w-4 h-4 text-[#e87722]" />
+                                ) : (
+                                  <Camera className="w-4 h-4 text-[#1b365d]" />
+                                )}
+                                <span>{isVideo ? "Video Statement (English)" : `Site Photo 0${i + 1}`}</span>
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => setMediaUploaded((prev) => prev.filter((_, idx) => idx !== i))}
+                                className="text-gray-400 hover:text-rose-600 p-0.5 rounded cursor-pointer transition"
+                                title="Remove attachment"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                            {isVideo ? (
+                              <video
+                                src={url}
+                                controls
+                                className="w-full max-h-36 rounded bg-black object-contain"
+                              />
+                            ) : (
+                              <img
+                                src={url}
+                                alt={`Evidence ${i + 1}`}
+                                className="w-full max-h-36 rounded object-cover border border-gray-200"
+                              />
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex justify-between pt-4">
@@ -884,7 +1092,15 @@ export default function ReportIssuePage() {
                   <div className="text-gray-700">
                     Location: <strong>{panchayat} Panchayat, {block}, {district}</strong> (GPS: {coordinates.lat.toFixed(4)}, {coordinates.lng.toFixed(4)})
                   </div>
-                  <div className="text-gray-600">Category: {category.split(" (")[0]} • Urgency: {urgency}</div>
+                  <div className="text-gray-600 flex flex-wrap items-center gap-2">
+                    <span>Category: {category.split(" (")[0]} • Urgency: {urgency}</span>
+                    {mediaUploaded.length > 0 && (
+                      <span className="bg-white border border-blue-300 text-blue-900 font-semibold px-2 py-0.5 rounded text-[11px]">
+                        📎 {mediaUploaded.length} Evidence Attachment(s)
+                        {mediaUploaded.some((u) => u.includes("video") || u.includes(".webm") || u.includes(".mp4")) && " • 📹 Video Statement"}
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

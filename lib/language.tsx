@@ -59,7 +59,7 @@ export const DICTIONARY: Record<Language, Record<string, string>> = {
     // Track Status Box
     trackTitle: "CHECK PROBLEM STATUS",
     trackSubtitle: "ProblemSetu Tracker",
-    trackPlaceholder: "Enter Tracking No. (e.g. JH-SOC-2026-1042)",
+    trackPlaceholder: "Enter Tracking No. (e.g. JH-SOC-2026-XXXX)",
     btnCheckStatus: "Check Status",
     assignedInstitution: "Assigned To:",
     viewTimeline: "View Full History",
@@ -290,44 +290,23 @@ const LanguageContext = createContext<LanguageContextType>({
 });
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [language, setLanguageState] = useState<Language>("en");
+  const language: Language = "en";
 
   useEffect(() => {
     try {
-      const saved = localStorage.getItem("problemsetu_lang") as Language;
-      if (saved === "en" || saved === "hi") {
-        setLanguageState(saved);
-        if (typeof document !== "undefined") {
-          document.documentElement.lang = saved;
-        }
+      localStorage.setItem("problemsetu_lang", "en");
+      if (typeof document !== "undefined") {
+        document.documentElement.lang = "en";
       }
     } catch {
       // ignore
     }
   }, []);
 
-  const setLanguage = (lang: Language) => {
-    setLanguageState(lang);
-    if (typeof document !== "undefined") {
-      document.documentElement.lang = lang;
-      try {
-        localStorage.setItem("problemsetu_lang", lang);
-      } catch {
-        // ignore
-      }
-    }
-  };
-
-  const toggleLanguage = () => {
-    const next = language === "en" ? "hi" : "en";
-    setLanguage(next);
-  };
+  const setLanguage = () => {};
+  const toggleLanguage = () => {};
 
   const t = (key: string, fallback?: string): string => {
-    const currentDict = DICTIONARY[language];
-    if (currentDict && currentDict[key]) {
-      return currentDict[key];
-    }
     const enDict = DICTIONARY.en;
     if (enDict && enDict[key]) {
       return enDict[key];

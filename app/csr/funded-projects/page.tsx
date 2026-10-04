@@ -117,8 +117,17 @@ export default function FundedProjectsPage() {
           </p>
         </div>
 
-        {projects.map((proj) => (
-          <div key={proj.id} className="gov-card border border-gray-300 rounded overflow-hidden">
+        {projects.length === 0 ? (
+          <div className="gov-card p-8 text-center border border-dashed border-gray-300 rounded space-y-3">
+            <DollarSign className="w-10 h-10 text-gray-400 mx-auto" />
+            <h3 className="text-base font-bold text-[#1b365d]">No Funded Escrow Projects Yet</h3>
+            <p className="text-xs text-gray-600 max-w-md mx-auto leading-relaxed">
+              When corporate CSR partners pledge capital to university proposals, the escrow projects, tranches, and milestone release gates will be actively managed here.
+            </p>
+          </div>
+        ) : (
+          projects.map((proj) => (
+            <div key={proj.id} className="gov-card border border-gray-300 rounded overflow-hidden">
             {/* Project Header */}
             <div className="bg-slate-100 p-4 border-b border-gray-200 flex flex-wrap items-center justify-between gap-3">
               <div>
@@ -229,7 +238,8 @@ export default function FundedProjectsPage() {
               </div>
             </div>
           </div>
-        ))}
+        ))
+        )}
       </div>
     </div>
   );

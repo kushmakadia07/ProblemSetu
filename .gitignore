@@ -39,3 +39,12 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# scratch / dev testing files
+scratch/
+/scratch/
+
+# uploaded media files
+public/uploads/
+/public/uploads/
+

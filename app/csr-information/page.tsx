@@ -74,18 +74,16 @@ export default function CsrInformationPage() {
             className="inline-flex items-center gap-1 text-sm text-gray-300 hover:text-white mb-6 font-semibold transition"
           >
             <ArrowLeft className="w-4 h-4" />
-            {language === "hi" ? "होम पर वापस जाएँ" : "Back to Home"}
+            Back to Home
           </Link>
           <div className="flex items-center gap-3">
             <BarChart3 className="w-10 h-10 text-[#e87722]" />
             <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-              {language === "hi" ? "झारखंड में सीएसआर व्यय और प्रभाव" : "CSR Expenditure & Impact in Jharkhand"}
+              CSR Expenditure & Impact in Jharkhand
             </h1>
           </div>
           <p className="mt-4 text-blue-100 max-w-2xl text-sm md:text-base leading-relaxed">
-            {language === "hi"
-              ? "झारखंड में कॉर्पोरेट सामाजिक उत्तरदायित्व (सीएसआर) के निवेश और इसके प्रभावों का विस्तृत विश्लेषण।"
-              : "A comprehensive overview of Corporate Social Responsibility (CSR) investments, contributors, and the focal areas driving social development in Jharkhand."}
+            A comprehensive overview of Corporate Social Responsibility (CSR) investments, contributors, and the focal areas driving social development in Jharkhand.
           </p>
         </div>
       </div>

@@ -17,7 +17,9 @@ import {
   ArrowLeft,
   Building,
   DollarSign,
-  Sparkles
+  Sparkles,
+  Film,
+  Camera
 } from "lucide-react";
 import { store, Grievance, BOMItem, Proposal } from "@/lib/store";
 
@@ -202,6 +204,19 @@ function UniversityProposalsContent() {
             </Link>
           </div>
         </div>
+      ) : grievances.length === 0 ? (
+        <div className="gov-card p-8 text-center border border-dashed border-gray-300 rounded space-y-3">
+          <GraduationCap className="w-10 h-10 text-gray-400 mx-auto" />
+          <h3 className="text-base font-bold text-[#1b365d]">No Routed Grievances Available</h3>
+          <p className="text-xs text-gray-600 max-w-md mx-auto leading-relaxed">
+            There are currently no citizen problems in the system to draft proposals for. Once citizens lodge community grievances on the ground, they will appear here for student teams to engineer solutions.
+          </p>
+          <div className="pt-2">
+            <Link href="/citizen/report-issue" className="gov-btn-accent text-xs font-semibold py-2 px-4 rounded inline-flex items-center gap-1.5">
+              <span>Lodge a Problem Report</span>
+            </Link>
+          </div>
+        </div>
       ) : (
         <form onSubmit={handleFormSubmit} className="space-y-6">
           {/* 1. Target Grievance Selection */}
@@ -230,6 +245,39 @@ function UniversityProposalsContent() {
                   <div className="text-gray-500 text-[11px]">
                     Location: {selectedGrievance.panchayat}, {selectedGrievance.district} • Urgency: {selectedGrievance.urgency}
                   </div>
+
+                  {selectedGrievance.mediaUrls && selectedGrievance.mediaUrls.length > 0 && (
+                    <div className="mt-2.5 pt-2 border-t border-slate-200 space-y-1.5">
+                      <div className="flex items-center gap-1.5 text-[11px] font-bold text-gray-700">
+                        <Film className="w-3.5 h-3.5 text-[#e87722]" />
+                        <span>Citizen Video Statement & Ground Evidence ({selectedGrievance.mediaUrls.length})</span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-1">
+                        {selectedGrievance.mediaUrls.map((url, mi) => {
+                          const isVideo =
+                            url.includes(".webm") ||
+                            url.includes(".mp4") ||
+                            url.includes(".mov") ||
+                            url.includes(".mkv") ||
+                            url.includes("/uploads/video_") ||
+                            url.startsWith("blob:");
+                          return (
+                            <div key={mi} className="bg-white border border-gray-200 rounded p-2 text-[10px]">
+                              <div className="font-semibold text-gray-600 mb-1 flex items-center gap-1">
+                                {isVideo ? <Film className="w-3 h-3 text-[#e87722]" /> : <Camera className="w-3 h-3 text-blue-700" />}
+                                <span>{isVideo ? "Citizen Video Statement (English)" : `Evidence Photo 0${mi + 1}`}</span>
+                              </div>
+                              {isVideo ? (
+                                <video src={url} controls className="w-full max-h-32 rounded bg-black object-contain" />
+                              ) : (
+                                <img src={url} alt={`Evidence ${mi + 1}`} className="w-full max-h-32 rounded object-cover" />
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
 
                   {selectedGrievance.aiDiagnosticQa && selectedGrievance.aiDiagnosticQa.length > 0 && (
                     <div className="mt-2.5 pt-2 border-t border-slate-200 space-y-1.5">

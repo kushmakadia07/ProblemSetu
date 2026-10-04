@@ -147,73 +147,83 @@ export default function UniversityDashboard() {
         </div>
 
         {/* Grid of Problem Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          {filteredGrievances.map((grv) => {
-            const hasExistingProposal = proposals.some((p) => p.grievanceId === grv.id);
-            return (
-              <div key={grv.id} className="gov-card p-5 border border-gray-300 rounded hover:shadow-md transition flex flex-col justify-between">
-                <div>
-                  <div className="flex items-center justify-between gap-2 mb-2">
-                    <span className="gov-badge gov-badge-saffron">{grv.category}</span>
-                    <span className="text-xs font-mono font-bold text-[#1b365d] bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
-                      {grv.id}
-                    </span>
+        {filteredGrievances.length === 0 ? (
+          <div className="gov-card p-8 text-center border border-dashed border-gray-300 rounded space-y-3">
+            <GraduationCap className="w-10 h-10 text-gray-400 mx-auto" />
+            <h3 className="text-base font-bold text-[#1b365d]">No Routed Grassroots Problems Yet</h3>
+            <p className="text-xs text-gray-600 max-w-md mx-auto leading-relaxed">
+              When citizens lodge problems on the ground, state council verified issues will be routed here for engineering student capstone teams and faculty mentors.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {filteredGrievances.map((grv) => {
+              const hasExistingProposal = proposals.some((p) => p.grievanceId === grv.id);
+              return (
+                <div key={grv.id} className="gov-card p-5 border border-gray-300 rounded hover:shadow-md transition flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center justify-between gap-2 mb-2">
+                      <span className="gov-badge gov-badge-saffron">{grv.category}</span>
+                      <span className="text-xs font-mono font-bold text-[#1b365d] bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+                        {grv.id}
+                      </span>
+                    </div>
+
+                    <h3 className="font-bold text-sm text-[#1b365d] leading-snug mb-2">
+                      {grv.title}
+                    </h3>
+
+                    <div className="flex items-center gap-1.5 text-xs text-gray-600 mb-2.5">
+                      <MapPin className="w-3.5 h-3.5 text-[#e87722]" />
+                      <span>
+                        {grv.panchayat}, {grv.block}, <strong>{grv.district} District</strong> (GPS: {grv.coordinates.lat.toFixed(3)}, {grv.coordinates.lng.toFixed(3)})
+                      </span>
+                    </div>
+
+                    <p className="text-xs text-gray-700 leading-relaxed line-clamp-3 mb-3">
+                      {grv.description}
+                    </p>
+
+                    <div className="flex items-center justify-between text-[11px] bg-slate-50 p-2.5 rounded border border-slate-200 mb-3">
+                      <div>
+                        <span className="text-gray-500">Urgency:</span>{" "}
+                        <strong className={grv.urgency === "Critical" ? "text-red-700" : "text-gray-800"}>
+                          {grv.urgency}
+                        </strong>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Beneficiaries:</span>{" "}
+                        <strong>~{grv.affectedCount.toLocaleString()} Citizens</strong>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">NEP Credits:</span>{" "}
+                        <strong className="text-purple-700">12 Credits</strong>
+                      </div>
+                    </div>
+
+                    {grv.assignedUniversityName && (
+                      <div className="text-[11px] text-emerald-800 font-semibold mb-3 flex items-center gap-1">
+                        <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>Assigned to: {grv.assignedUniversityName} ({grv.studentTeamName})</span>
+                      </div>
+                    )}
                   </div>
 
-                  <h3 className="font-bold text-sm text-[#1b365d] leading-snug mb-2">
-                    {grv.title}
-                  </h3>
-
-                  <div className="flex items-center gap-1.5 text-xs text-gray-600 mb-2.5">
-                    <MapPin className="w-3.5 h-3.5 text-[#e87722]" />
-                    <span>
-                      {grv.panchayat}, {grv.block}, <strong>{grv.district} District</strong> (GPS: {grv.coordinates.lat.toFixed(3)}, {grv.coordinates.lng.toFixed(3)})
-                    </span>
+                  <div className="pt-3 border-t border-gray-200 flex items-center justify-between">
+                    <span className="gov-badge gov-badge-active">{grv.status}</span>
+                    <Link
+                      href={`/university/proposals?grievanceId=${grv.id}`}
+                      className="gov-btn-accent text-xs py-1.5 px-3 rounded font-bold flex items-center gap-1"
+                    >
+                      <span>{hasExistingProposal ? "View / Edit Proposal" : "Form Team & Draft Proposal"}</span>
+                      <ArrowRight className="w-3 h-3" />
+                    </Link>
                   </div>
-
-                  <p className="text-xs text-gray-700 leading-relaxed line-clamp-3 mb-3">
-                    {grv.description}
-                  </p>
-
-                  <div className="flex items-center justify-between text-[11px] bg-slate-50 p-2.5 rounded border border-slate-200 mb-3">
-                    <div>
-                      <span className="text-gray-500">Urgency:</span>{" "}
-                      <strong className={grv.urgency === "Critical" ? "text-red-700" : "text-gray-800"}>
-                        {grv.urgency}
-                      </strong>
-                    </div>
-                    <div>
-                      <span className="text-gray-500">Beneficiaries:</span>{" "}
-                      <strong>~{grv.affectedCount.toLocaleString()} Citizens</strong>
-                    </div>
-                    <div>
-                      <span className="text-gray-500">NEP Credits:</span>{" "}
-                      <strong className="text-purple-700">12 Credits</strong>
-                    </div>
-                  </div>
-
-                  {grv.assignedUniversityName && (
-                    <div className="text-[11px] text-emerald-800 font-semibold mb-3 flex items-center gap-1">
-                      <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
-                      <span>Assigned to: {grv.assignedUniversityName} ({grv.studentTeamName})</span>
-                    </div>
-                  )}
                 </div>
-
-                <div className="pt-3 border-t border-gray-200 flex items-center justify-between">
-                  <span className="gov-badge gov-badge-active">{grv.status}</span>
-                  <Link
-                    href={`/university/proposals?grievanceId=${grv.id}`}
-                    className="gov-btn-accent text-xs py-1.5 px-3 rounded font-bold flex items-center gap-1"
-                  >
-                    <span>{hasExistingProposal ? "View / Edit Proposal" : "Form Team & Draft Proposal"}</span>
-                    <ArrowRight className="w-3 h-3" />
-                  </Link>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );

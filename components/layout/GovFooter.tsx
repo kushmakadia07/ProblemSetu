@@ -35,17 +35,17 @@ export default function GovFooter() {
           <ul className="space-y-2 text-[11px]">
             <li>
               <Link href="/about" className="hover:text-amber-300 transition flex items-center gap-1">
-                <span>{language === "hi" ? "एनईपी 2020: व्यावहारिक एवं सामुदायिक क्रेडिट" : "NEP 2020: Experiential & Community Credits"}</span>
+                <span>NEP 2020: Experiential & Community Credits</span>
               </Link>
             </li>
             <li>
               <Link href="/about" className="hover:text-amber-300 transition flex items-center gap-1">
-                <span>{language === "hi" ? "नियम और नीतियां" : "Rules & Guidelines"}</span>
+                <span>Rules & Guidelines</span>
               </Link>
             </li>
             <li>
               <Link href="/analytics/leaderboard" className="hover:text-amber-300 transition">
-                {language === "hi" ? "रैंकिंग और आंकड़े" : "Rankings & Data"}
+                Rankings & Data
               </Link>
             </li>
           </ul>
@@ -57,22 +57,22 @@ export default function GovFooter() {
           <ul className="space-y-2 text-[11px]">
             <li>
               <Link href="/citizen/dashboard" className="hover:text-amber-300 transition">
-                {language === "hi" ? "नागरिक पोर्टल: आधार सत्यापित समस्या निवारण" : "Citizen Portal: Aadhaar Verified Grievances"}
+                Citizen Portal: Aadhaar Verified Grievances
               </Link>
             </li>
             <li>
               <Link href="/citizen/verify-resolution" className="hover:text-amber-300 transition">
-                {language === "hi" ? "नागरिक गेटवे: फील्ड प्रोटोटाइप सत्यापन" : "Citizen Stage-Gate: Verify Field Prototypes"}
+                Citizen Stage-Gate: Verify Field Prototypes
               </Link>
             </li>
             <li>
               <Link href="/university/dashboard" className="hover:text-amber-300 transition">
-                {language === "hi" ? "विश्वविद्यालय: बहुविषयक इंजीनियरिंग टीमें" : "Academia: Multidisciplinary Engineering Teams"}
+                Academia: Multidisciplinary Engineering Teams
               </Link>
             </li>
             <li>
               <Link href="/csr/dashboard" className="hover:text-amber-300 transition">
-                {language === "hi" ? "सीएसआर भागीदार: एस्क्रो फंडिंग एवं स्केल-अप" : "CSR Partners: Escrow Funding & Scale-Up"}
+                CSR Partners: Escrow Funding & Scale-Up
               </Link>
             </li>
           </ul>

@@ -80,11 +80,11 @@ export default function HomePage() {
     return () => unsub();
   }, []);
 
-  // Stats calculation
-  const totalIssues = grievances.length + 1840; // realistic aggregate figure
-  const activeProposals = 38;
-  const verifiedClosures = grievances.filter((g) => g.status === "RESOLVED_CLOSED").length + 612;
-  const csrFundsLakhs = 769.5;
+  // Real stats calculation directly from live submitted grievances and projects
+  const totalIssues = grievances.length;
+  const activeProposals = store.getProposals().length;
+  const verifiedClosures = grievances.filter((g) => g.status === "RESOLVED_CLOSED").length;
+  const csrFundsLakhs = Math.round(store.getFundedProjects().reduce((acc, p) => acc + (p.disbursedAmount / 100000), 0) * 10) / 10;
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -97,7 +97,7 @@ export default function HomePage() {
     const digitsOnly = val.replace(/\D/g, "").slice(0, 12);
     setAadhaarNumber(digitsOnly);
     if (digitsOnly.length > 0 && digitsOnly.length < 12) {
-      setAadhaarError(language === "hi" ? "आधार संख्या 12 अंकों की होनी चाहिए।" : "Aadhaar Card number must be exactly 12 digits.");
+      setAadhaarError("Aadhaar Card number must be exactly 12 digits.");
     } else {
       setAadhaarError("");
     }
@@ -109,21 +109,17 @@ export default function HomePage() {
     const cleanMobile = mobileNumber.replace(/\D/g, "");
 
     if (cleanAadhaar.length !== 12) {
-      setAadhaarError(language === "hi" ? "कृपया 12-अंकीय आधार कार्ड संख्या दर्ज करें (व्यक्ति पहचान प्रमाण)।" : "Please enter a valid 12-digit Aadhaar Card number for mandatory proof of person.");
+      setAadhaarError("Please enter a valid 12-digit Aadhaar Card number.");
       return;
     }
     if (cleanMobile.length < 10) {
-      setLoginMessage(language === "hi" ? "कृपया आधार से लिंक 10-अंकीय मोबाइल नंबर दर्ज करें।" : "Please enter a valid 10-digit mobile number linked with your Aadhaar.");
+      setLoginMessage("Please enter a valid 10-digit mobile number.");
       return;
     }
 
     setAadhaarError("");
     setOtpSent(true);
-    setLoginMessage(
-      language === "hi"
-        ? `आधार संख्या (XXXX-XXXX-${cleanAadhaar.slice(8)}) लिंक मोबाइल +91 ${cleanMobile} से सत्यापित। यूआईडीएआई ओटीपी भेजा गया (डेमो कोड: 123456)`
-        : `Aadhaar (XXXX-XXXX-${cleanAadhaar.slice(8)}) verified with linked mobile +91 ${cleanMobile}. Demo OTP sent: 123456`
-    );
+    setLoginMessage(`OTP sent to +91 ${cleanMobile}. (Demo code: 123456)`);
   };
 
   const handleLoginSubmit = (e: React.FormEvent) => {
@@ -453,56 +449,75 @@ export default function HomePage() {
             </Link>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {grievances.slice(0, 3).map((item) => (
-              <div key={item.id} className="gov-card flex flex-col justify-between hover:shadow-md transition">
-                <div className="p-4">
-                  <div className="flex items-center justify-between gap-2 mb-2">
-                    <span className="gov-badge gov-badge-saffron">{item.category}</span>
-                    <span className="text-[11px] font-mono text-gray-500 font-semibold">{item.id}</span>
-                  </div>
-
-                  <h3 className="font-bold text-sm text-[#1b365d] leading-snug mb-2 line-clamp-2">
-                    {item.title}
-                  </h3>
-
-                  <div className="flex items-center gap-1.5 text-xs text-gray-600 mb-2">
-                    <MapPin className="w-3.5 h-3.5 text-[#e87722]" />
-                    <span>
-                      {item.panchayat}, {item.block}, <strong>{item.district}</strong>
-                    </span>
-                  </div>
-
-                  <p className="text-xs text-gray-600 line-clamp-3 mb-3">
-                    {item.description}
-                  </p>
-
-                  {item.assignedUniversityName && (
-                    <div className="bg-slate-50 border border-slate-200 p-2 rounded text-[11px] space-y-1">
-                      <div className="font-semibold text-[#1b365d] flex items-center gap-1">
-                        <GraduationCap className="w-3.5 h-3.5 text-blue-800" />
-                        <span className="truncate">{item.assignedUniversityName}</span>
-                      </div>
-                      <div className="text-gray-500 text-[10px]">
-                        Team: {item.studentTeamName}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <div className="bg-gray-50 px-4 py-2.5 border-t border-gray-200 flex items-center justify-between text-xs">
-                  <span className="gov-badge gov-badge-active">{item.status}</span>
-                  <Link
-                    href={`/citizen/dashboard`}
-                    className="text-[#1b365d] font-semibold hover:text-[#e87722] flex items-center gap-1"
-                  >
-                    <span>{t("viewLifecycle")}</span>
-                    <ArrowRight className="w-3 h-3" />
-                  </Link>
-                </div>
+          {grievances.length === 0 ? (
+            <div className="bg-slate-50 border border-dashed border-gray-300 rounded-lg p-8 text-center max-w-xl mx-auto space-y-3">
+              <FilePlus className="w-10 h-10 text-gray-400 mx-auto" />
+              <h3 className="text-base font-bold text-[#1b365d]">No Citizen Grievances Reported Yet</h3>
+              <p className="text-xs text-gray-600 leading-relaxed">
+                Be the first citizen to report a community issue (water, roads, sanitation, electricity). Your report will be saved directly to the database and routed to university engineering teams.
+              </p>
+              <div className="pt-2">
+                <Link
+                  href="/login?redirect=/citizen/report-issue"
+                  className="gov-btn-accent text-xs font-semibold py-2 px-4 rounded inline-flex items-center gap-1.5"
+                >
+                  <FilePlus className="w-4 h-4" />
+                  <span>Lodge First Grievance</span>
+                </Link>
               </div>
-            ))}
-          </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {grievances.slice(0, 3).map((item) => (
+                <div key={item.id} className="gov-card flex flex-col justify-between hover:shadow-md transition">
+                  <div className="p-4">
+                    <div className="flex items-center justify-between gap-2 mb-2">
+                      <span className="gov-badge gov-badge-saffron">{item.category}</span>
+                      <span className="text-[11px] font-mono text-gray-500 font-semibold">{item.id}</span>
+                    </div>
+
+                    <h3 className="font-bold text-sm text-[#1b365d] leading-snug mb-2 line-clamp-2">
+                      {item.title}
+                    </h3>
+
+                    <div className="flex items-center gap-1.5 text-xs text-gray-600 mb-2">
+                      <MapPin className="w-3.5 h-3.5 text-[#e87722]" />
+                      <span>
+                        {item.panchayat}, {item.block}, <strong>{item.district}</strong>
+                      </span>
+                    </div>
+
+                    <p className="text-xs text-gray-600 line-clamp-3 mb-3">
+                      {item.description}
+                    </p>
+
+                    {item.assignedUniversityName && (
+                      <div className="bg-slate-50 border border-slate-200 p-2 rounded text-[11px] space-y-1">
+                        <div className="font-semibold text-[#1b365d] flex items-center gap-1">
+                          <GraduationCap className="w-3.5 h-3.5 text-blue-800" />
+                          <span className="truncate">{item.assignedUniversityName}</span>
+                        </div>
+                        <div className="text-gray-500 text-[10px]">
+                          Team: {item.studentTeamName}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="bg-gray-50 px-4 py-2.5 border-t border-gray-200 flex items-center justify-between text-xs">
+                    <span className="gov-badge gov-badge-active">{item.status}</span>
+                    <Link
+                      href={`/citizen/dashboard`}
+                      className="text-[#1b365d] font-semibold hover:text-[#e87722] flex items-center gap-1"
+                    >
+                      <span>{t("viewLifecycle")}</span>
+                      <ArrowRight className="w-3 h-3" />
+                    </Link>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 

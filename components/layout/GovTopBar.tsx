@@ -3,11 +3,11 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { PhoneCall, Globe, Info, Home } from "lucide-react";
+import { PhoneCall, Info, Home } from "lucide-react";
 import { useLanguage } from "@/lib/language";
 
 export default function GovTopBar() {
-  const { language, toggleLanguage, t } = useLanguage();
+  const { t } = useLanguage();
   const [fontSize, setFontSize] = useState<number>(100);
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
   const [isAboutModalOpen, setIsAboutModalOpen] = useState(false);
@@ -110,19 +110,6 @@ export default function GovTopBar() {
                 A+
               </button>
             </div>
-
-            {/* Language Switch */}
-            <div className="flex items-center gap-1.5 bg-[#e87722] hover:bg-[#d06718] text-white border border-amber-300/40 rounded px-2 py-0.5 shadow-xs transition">
-              <Globe className="w-3.5 h-3.5 text-white" />
-              <button
-                type="button"
-                onClick={toggleLanguage}
-                className="font-bold text-xs uppercase tracking-wider cursor-pointer"
-                title={language === "en" ? "Switch to Hindi (हिन्दी)" : "Switch to English"}
-              >
-                {language === "en" ? "हिन्दी" : "English"}
-              </button>
-            </div>
           </div>
         </div>
       </div>
@@ -146,10 +133,10 @@ export default function GovTopBar() {
 
             <div>
               <div className="text-xs font-bold text-[#e87722] uppercase tracking-wider">
-                {language === "hi" ? "नागरिक सहायता" : "CITIZEN SUPPORT"}
+                CITIZEN SUPPORT
               </div>
               <h1 className="text-2xl md:text-3xl font-black text-[#1b365d] tracking-tight leading-snug">
-                {language === "hi" ? "समस्या सेतु (ProblemSetu)" : "ProblemSetu"}
+                ProblemSetu
               </h1>
               <p className="text-xs text-gray-600 font-medium hidden sm:block">
                 {t("portalSubtitle")}

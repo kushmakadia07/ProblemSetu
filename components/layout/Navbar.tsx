@@ -40,10 +40,16 @@ export default function Navbar() {
   }, []);
 
   const handleRoleChange = (newRole: UserRole) => {
-    store.setRole(newRole);
-    setRole(newRole);
-    if (newRole === "citizen") router.push("/citizen/dashboard");
-    else router.push("/");
+    if (newRole === "public") {
+      store.signOut();
+      setRole("public");
+      router.push("/");
+    } else {
+      store.setRole(newRole);
+      setRole(newRole);
+      if (newRole === "citizen") router.push("/citizen/dashboard");
+      else router.push("/");
+    }
   };
 
   // Dynamic Navigation Links based on active persona

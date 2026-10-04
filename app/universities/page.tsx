@@ -64,18 +64,16 @@ export default function UniversitiesPage() {
             className="inline-flex items-center gap-1 text-sm text-gray-300 hover:text-white mb-6 font-semibold transition"
           >
             <ArrowLeft className="w-4 h-4" />
-            {language === "hi" ? "होम पर वापस जाएँ" : "Back to Home"}
+            Back to Home
           </Link>
           <div className="flex items-center gap-3">
             <GraduationCap className="w-10 h-10 text-[#e87722]" />
             <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-              {language === "hi" ? "हमारे साथ जुड़े विश्वविद्यालय" : "Universities Connected with Us"}
+              Universities Connected with Us
             </h1>
           </div>
           <p className="mt-4 text-blue-100 max-w-2xl text-sm md:text-base leading-relaxed">
-            {language === "hi"
-              ? "झारखंड के सभी प्रमुख विश्वविद्यालय और राष्ट्रीय संस्थान इस पहल का हिस्सा हैं। ये संस्थान जमीनी समस्याओं को तकनीकी समाधान में बदलने में मदद करते हैं।"
-              : "A comprehensive list of all major state and national educational institutions in Jharkhand working with us to turn grassroots problems into technical solutions."}
+            A comprehensive list of all major state and national educational institutions in Jharkhand working with us to turn grassroots problems into technical solutions.
           </p>
         </div>
       </div>
